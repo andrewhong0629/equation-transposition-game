@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>方程移項大激鬥(第一階段) - Equation Transposition Battle</title>
+    <style>
+        :root {
+            --bg-color: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --primary-blue: #007AFF;
+            --apple-green: #34C759;
+            --apple-red: #FF3B30;
+            --apple-grey: #8E8E93;
+            --text-color: #1C1C1E;
+            --text-muted: #8E8E93;
+            --border-light: #E5E5EA;
+        }
+        * {
+            box-sizing: border-box;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-user-drag: none; /* 解決 iPad 出現原生拖曳殘影的問題 */
+            -webkit-touch-callout: none; /* 解決長按選單問題 */
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* 保持輸入框可以正常輸入及選取文字 */
+        input, select, textarea {
+            user-select: auto;
+            -webkit-user-select: auto;
+            touch-action: auto;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+        #game-container {
+            width: 96vw;
+            height: 94vh;
+            max-width: 1024px;
+            max-height: 768px;
+            background: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            border: 1px solid var(--border-light);
+            transition: transform 0.1s ease;
+            overflow: hidden;
+        }
+        #toast {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(28, 28, 30, 0.88);
+            color: #FFFFFF;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        @keyframes shakeRed {
+            0%, 100% { transform: translateX(0); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.06); }
+            20%, 60% { transform: translateX(-8px); box-shadow: 0 0 25px rgba(255, 59, 48, 0.25); }
+            40%, 80% { transform: translateX(8px); box-shadow: 0 0 25px rgba(255, 59, 48, 0.25); }
+        }
+        .shake-red {
+            animation: shakeRed 0.4s ease-in-out;
+            border: 1.5px solid var(--apple-red) !important;
+        }
+        @keyframes blueFlash {
+            0% { background-color: var(--card-bg); }
+            50% { background-color: rgba(0, 122, 255, 0.1); }
+            100% { background-color: var(--card-bg); }
+        }
+        .blue-flash {
+            animation: blueFlash 0.4s ease-out;
+        }
+        .screen {
+            display: none;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+        }
+        .screen.active {
+            display: flex;
+        }
+        #welcome-screen {
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px 0;
+            overflow-y: auto;
+        }
+        .apple-title {
+            text-align: center;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            font-weight: 800;
+            margin: 5px 0;
+            color: var(--text-color);
+            letter-spacing: -0.5px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 90%;
+            max-width: 400px;
+        }
+        .input-group label {
+            font-size: clamp(0.8rem, 1.8vw, 0.9rem);
+            color: var(--apple-grey);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding-left: 4px;
+        }
+        .apple-input {
+            background: #F2F2F7;
+            border: 1px solid var(--border-light);
+            padding: 12px 18px;
+            border-radius: 12px;
+            color: var(--text-color);
+            font-size: clamp(1rem, 2vw, 1.15rem);
+            font-weight: 500;
+            text-align: center;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .apple-input:focus {
+            background: #FFFFFF;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.15);
+        }
+        .level-selector {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        .level-btn {
+            flex: 1;
+            background: #F2F2F7;
+            border: 2px solid transparent;
+            color: var(--text-color);
+            padding: clamp(10px, 2vh, 14px);
+            font-size: clamp(0.9rem, 2vw, 1.05rem);
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .level-btn.selected {
+            background: #FFFFFF;
+            border-color: var(--primary-blue);
+            color: var(--primary-blue);
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.12);
+        }
+        .apple-btn {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: clamp(12px, 2.5vh, 18px) 60px;
+            font-size: clamp(1.1rem, 2.2vw, 1.25rem);
+            font-weight: 600;
+            border-radius: 16px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0, 122, 255, 0.15);
+            transition: all 0.2s ease;
+            width: 90%;
+            max-width: 400px;
+        }
+        .apple-btn:active {
+            transform: scale(0.97);
+            box-shadow: 0 4px 10px rgba(0, 122, 255, 0.1);
+        }
+        .leaderboard-box {
+            width: 90%;
+            max-width: 400px;
+            background: #F2F2F7;
+            border-radius: 18px;
+            padding: 14px 18px;
+        }
+        .leaderboard-title {
+            text-align: center;
+            font-size: clamp(0.9rem, 2vw, 1.05rem);
+            color: var(--text-color);
+            margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .leaderboard-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #FFFFFF;
+            border-radius: 8px;
+            font-size: clamp(0.85rem, 1.8vw, 0.95rem);
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+        }
+        .leaderboard-item.top {
+            color: var(--primary-blue);
+            font-weight: 700;
+        }
+        #hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            width: 100%;
+            gap: 10px;
+        }
+        .hud-pill {
+            background: #F2F2F7;
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-size: clamp(0.85rem, 1.8vw, 0.95rem);
+            font-weight: 600;
+        }
+        #timer {
+            color: var(--primary-blue);
+            font-family: -apple-system, BlinkMacSystemFont, monospace;
+        }
+        #round-indicator {
+            color: var(--text-color);
+            flex-grow: 1;
+            text-align: center;
+        }
+        .back-home-btn {
+            background: #E5E5EA;
+            border: none;
+            color: var(--text-color);
+            padding: 8px 14px;
+            font-size: clamp(0.85rem, 1.8vw, 0.95rem);
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .back-home-btn:active {
+            transform: scale(0.95);
+            background: #D1D1D6;
+        }
+        #progress-container {
+            width: 100%;
+            height: 6px;
+            background: #E5E5EA;
+            border-radius: 3px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--primary-blue);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        #instruction {
+            text-align: center;
+            font-size: clamp(1.05rem, 2.5vw, 1.25rem);
+            color: var(--apple-grey);
+            font-weight: 600;
+            margin-bottom: 12px;
+            min-height: 35px;
+            padding: 0 10px;
+        }
+        #stage-area {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: #FAF9F6;
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        .workspace {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(2rem, 6vw, 3.5rem);
+            font-weight: 700;
+            gap: clamp(8px, 2.5vw, 15px);
+            position: relative;
+        }
+        .math-node {
+            padding: clamp(6px, 1.5vh, 12px) clamp(10px, 2.5vw, 20px);
+            border-radius: 12px;
+            background: #F2F2F7;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: background 0.3s, border-color 0.3s, transform 0.1s;
+        }
+        .math-node.equal {
+            background: none;
+            padding: 0 5px;
+        }
+        .math-node span {
+            pointer-events: none;
+        }
+        .math-frac {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: clamp(60px, 12vw, 85px);
+            gap: 4px;
+        }
+        .math-frac-line {
+            width: 100%;
+            height: clamp(3px, 0.8vh, 4px);
+            background: var(--text-color);
+            border-radius: 2px;
+        }
+        .draggable {
+            background: rgba(0, 122, 255, 0.08);
+            border: 2px solid var(--primary-blue);
+            color: var(--primary-blue);
+            cursor: grab;
+            z-index: 10;
+            touch-action: none;
+            -webkit-user-drag: none;
+            will-change: transform; /* 提示瀏覽器預先優化變形 */
+        }
+        .dragging {
+            opacity: 0.95 !important;
+            background: var(--primary-blue) !important;
+            color: white !important;
+            box-shadow: 0 10px 25px rgba(0, 122, 255, 0.25) !important;
+            z-index: 9999 !important;
+            cursor: grabbing;
+            -webkit-transform: translateZ(0); /* 強制開啟硬體加速 */
+            transform: translateZ(0);
+        }
+        .clickable-calc {
+            background: rgba(52, 199, 89, 0.1);
+            border: 2px dashed var(--apple-green);
+            color: var(--apple-green);
+            cursor: pointer;
+            padding: clamp(6px, 1.5vh, 12px) clamp(10px, 2.5vw, 20px);
+            border-radius: 12px;
+            animation: bounceCalc 2s infinite ease-in-out;
+        }
+        @keyframes bounceCalc {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .drop-zone {
+            position: absolute;
+            border: 3px dashed #C7C7CC;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(0.8rem, 1.8vw, 0.95rem);
+            color: var(--apple-grey);
+            font-weight: 600;
+            pointer-events: none;
+            transition: all 0.2s ease;
+            opacity: 0;
+            z-index: 5;
+        }
+        .drop-zone.visible {
+            opacity: 1;
+        }
+        .drop-zone.active {
+            border-color: var(--primary-blue);
+            background: rgba(0, 122, 255, 0.05);
+            color: var(--primary-blue);
+            transform: scale(1.04);
+        }
+        #end-screen {
+            justify-content: center;
+            align-items: center;
+            gap: 25px;
+        }
+        .rank-card {
+            background: #F2F2F7;
+            padding: 30px;
+            border-radius: 22px;
+            text-align: center;
+            width: 90%;
+            max-width: 420px;
+        }
+        .credits-footer {
+            position: absolute;
+            bottom: 12px;
+            right: 24px;
+            font-size: clamp(0.65rem, 1.5vw, 0.75rem);
+            color: var(--apple-grey);
+            font-weight: 500;
+            pointer-events: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+<div id="game-container">
+    <div id="toast">💡 請拖曳數字至虛線目標區</div>
+    
+    <!-- 1. 首頁歡迎畫面 -->
+    <div id="welcome-screen" class="screen active">
+        <div>
+            <div style="text-align: center; color: var(--primary-blue); font-weight: 700; font-size: clamp(1rem, 2.2vw, 1.15rem); letter-spacing: 1.5px; margin-bottom: 2px;">張沛松紀念中學</div>
+            <h1 class="apple-title">方程移項大激鬥(第一階段)</h1>
+            <p style="color: var(--text-muted); text-align: center; margin: 0 0 10px 0; font-weight: 500; font-size: clamp(0.85rem, 1.8vw, 0.95rem);">Proportion & Transposition Speedrun</p>
+        </div>
+        
+        <div class="input-group">
+            <label for="player-class-seat">班別及座號 (例如: 1B02)</label>
+            <input type="text" id="player-class-seat" class="apple-input" placeholder="例如: 1B02" maxlength="10">
+        </div>
+        <div class="input-group">
+            <label>選擇難度等級</label>
+            <div class="level-selector">
+                <button id="lvl1-btn" class="level-btn selected" onclick="selectLevel(1)">Lv1 基礎</button>
+                <button id="lvl2-btn" class="level-btn" onclick="selectLevel(2)">Lv2 雙步</button>
+                <button id="lvl3-btn" class="level-btn" onclick="selectLevel(3)">Lv3 交叉</button>
+            </div>
+        </div>
+        <button class="apple-btn" onclick="tryStartGame()">開始挑戰</button>
+        <div class="leaderboard-box">
+            <div id="leaderboard-title" class="leaderboard-title">🏆 排行榜 (Lv1)</div>
+            <div id="leaderboard-container" class="leaderboard-list"></div>
+        </div>
+    </div>
+    <!-- 2. 遊戲主畫面 -->
+    <div id="play-screen" class="screen">
+        <div id="hud">
+            <button class="back-home-btn" onclick="resetToWelcome()">← 返回首頁</button>
+            <div id="round-indicator" class="hud-pill">關卡: 1/10 (Lv1)</div>
+            <div id="timer" class="hud-pill">0.0s</div>
+        </div>
+        <div id="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div id="instruction">第一步：移項</div>
+        <div id="stage-area">
+            <div id="target-zone" class="drop-zone">目標位置</div>
+            <div id="target-zone-2" class="drop-zone">目標位置</div>
+            <div id="workspace" class="workspace"></div>
+        </div>
+    </div>
+    <!-- 3. 結算畫面 -->
+    <div id="end-screen" class="screen">
+        <h1 class="apple-title" style="color: var(--apple-green);">🎉 挑戰完成！</h1>
+        <div class="rank-card">
+            <h2 id="final-player" style="margin: 0; font-size: 1.4rem; color: var(--text-color);">[1B02]</h2>
+            <p id="final-penalty-display" style="font-size: 1.1rem; font-weight: bold; color: var(--apple-red); margin: 5px 0 0 0;">(包含移項出錯罰時：+0 秒)</p>
+            <p id="final-time" style="font-size: 2.6rem; font-weight: 800; margin: 15px 0; color: var(--primary-blue);">45.2s</p>
+            <div id="final-rank" style="font-size: 1.1rem; font-weight: 600; color: var(--apple-green); margin-bottom: 25px;">[稱號] 移項精英</div>
+            <button class="apple-btn" style="width: 100%;" onclick="resetToWelcome()">回到首頁</button>
+        </div>
+    </div>
+    <!-- 右下角常駐製作資訊 -->
+    <div class="credits-footer">製作學生：1B02(25-26) 陳士琂 及協作老師：羅子康老師</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+    const sb = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    
+    const state = {
+        playerClassSeat: '',
+        playerName: '',
+        selectedLevel: 1, 
+        startTime: null,
+        penaltyTime: 0,
+        timerInt: null,
+        currentRound: 1, 
+        incorrectAttempts: 0,
+        gameState: 'IDLE', 
+        currentQ: {},
+        dragData: { active: false, el: null, startX: 0, startY: 0, x: 0, y: 0 },
+        supabaseGameId: null
+    };
+    const totalRounds = 10;
+    window.onload = () => {
+        updateLeaderboardView();
+    };
+    function selectLevel(lv) {
+        state.selectedLevel = lv;
+        document.querySelectorAll('.level-btn').forEach(btn => btn.classList.remove('selected'));
+        
+        if (lv === 1) document.getElementById('lvl1-btn').classList.add('selected');
+        if (lv === 2) document.getElementById('lvl2-btn').classList.add('selected');
+        if (lv === 3) document.getElementById('lvl3-btn').classList.add('selected');
+        updateLeaderboardView();
+    }
+    function renderLeaderboardHTML(list, isOffline) {
+        const container = document.getElementById('leaderboard-container');
+        if (!container) return;
+        list.sort((a, b) => parseFloat(a.time) - parseFloat(b.time));
+        container.innerHTML = '';
+        const top10 = list.slice(0, 10);
+        if (top10.length === 0) {
+            container.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-size:0.9rem; padding:10px 0;">尚無挑戰紀錄，快來搶佔第一！</div>`;
+            return;
+        }
+        top10.forEach((item, index) => {
+            const isTop = index === 0;
+            container.innerHTML += `
+                <div class="leaderboard-item ${isTop ? 'top' : ''}">
+                    <span>NO.${index + 1} [${item.classSeat}] ${isOffline ? '<span style="font-size:0.7rem; color:var(--apple-grey);">(本地緩存)</span>' : ''}</span>
+                    <span>${parseFloat(item.time).toFixed(1)} 秒</span>
+                </div>
+            `;
+        });
+    }
+    async function updateLeaderboardView() {
+        const lvKey = 'lv' + state.selectedLevel;
+        const container = document.getElementById('leaderboard-container');
+        if (!container) return;
+        document.getElementById('leaderboard-title').innerText = `🏆 排行榜 (Lv${state.selectedLevel})`;
+        container.innerHTML = `<div style="text-align:center; color:var(--text-muted); font-size:0.9rem; padding:10px 0;">雲端排行榜同步中...</div>`;
+        try {
+            const { data, error } = await sb.rpc('get_public_leaderboard', { p_level: state.selectedLevel, p_limit: 10 });
+            if (error) throw error;
+            const list = (data || []).map(item => ({ classSeat: item.class_seat, time: Number(item.final_time), incorrectAttempts: Number(item.incorrect_attempts || 0) }));
+            const localScores = JSON.parse(localStorage.getItem('eq_run_local_scores_v5')) || { lv1: [], lv2: [], lv3: [] };
+            localScores[lvKey] = list;
+            localStorage.setItem('eq_run_local_scores_v5', JSON.stringify(localScores));
+            renderLeaderboardHTML(list, false);
+        } catch (error) {
+            console.warn("雲端載入失敗，已自動啟用本地緩存備份紀錄。", error);
+            const localScores = JSON.parse(localStorage.getItem('eq_run_local_scores_v5')) || { lv1: [], lv2: [], lv3: [] };
+            const list = localScores[lvKey] || [];
+            renderLeaderboardHTML(list, true);
+        }
+    }
+
+    async function startPublicGame() {
+        try {
+            const { data, error } = await sb.rpc('start_public_game', { p_class_seat: state.playerClassSeat, p_level: state.selectedLevel });
+            if (error) throw error;
+            state.supabaseGameId = data;
+        } catch (error) {
+            state.supabaseGameId = null;
+            console.warn("建立 Supabase 遊戲紀錄失敗：", error);
+        }
+    }
+
+    async function uploadScoreToSupabase(classSeat, finalTime, level, incorrectAttempts, penaltyTime) {
+        if (!state.supabaseGameId) throw new Error('Supabase 遊戲紀錄不存在');
+        const { error } = await sb.rpc('finish_public_game', { p_game_id: state.supabaseGameId, p_class_seat: classSeat, p_final_time: finalTime, p_incorrect_attempts: incorrectAttempts, p_penalty_time: penaltyTime });
+        if (error) throw error;
+    }
+
+    function tryStartGame() {
+        const classSeatInput = document.getElementById('player-class-seat');
+        if (!classSeatInput || !classSeatInput.value.trim()) {
+            showToast("請填寫【班別及座號】！");
+            return;
+        }
+        state.playerClassSeat = classSeatInput.value.trim().toUpperCase();
+        state.playerName = '';
+        startGame();
+    }
+    function showToast(text) {
+        const toast = document.getElementById('toast');
+        if (toast) {
+            toast.innerText = text;
+            toast.style.opacity = '1';
+            toast.style.top = '30px';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.top = '20px';
+            }, 2200);
+        }
+    }
+    function startGame() {
+        state.currentRound = 1;
+        state.incorrectAttempts = 0;
+        state.penaltyTime = 0;
+        state.startTime = Date.now();
+        state.supabaseGameId = null;
+        startPublicGame();
+        
+        document.getElementById('welcome-screen').classList.remove('active');
+        document.getElementById('play-screen').classList.add('active');
+        clearInterval(state.timerInt);
+        state.timerInt = setInterval(updateTimer, 100);
+        loadRound();
+    }
+    function updateTimer() {
+        const elapsed = (Date.now() - state.startTime) / 1000 + state.penaltyTime;
+        document.getElementById('timer').innerText = elapsed.toFixed(1) + 's';
+    }
+    function loadRound() {
+        const r = state.currentRound;
+        const lv = state.selectedLevel;
+        
+        document.getElementById('round-indicator').innerText = `關卡: ${r}/10 (Lv${lv})`;
+        document.getElementById('progress-bar').style.width = `${((r - 1) / totalRounds) * 100}%`;
+        if (lv === 1) state.gameState = 'L1_CONST';
+        if (lv === 2) state.gameState = 'L2_CONST';
+        generateQuestion();
+    }
+    function generateQuestion() {
+        const lv = state.selectedLevel;
+        
+        if (lv === 1) {
+            const types = ['add', 'sub', 'mul', 'div', 'add_x_second', 'sub_x_second', 'const_sub_x', 'neg_const_sub_x'];
+            const chosenType = types[Math.floor(Math.random() * types.length)];
+            const k = Math.floor(Math.random() * 8) + 2; 
+            const ans = Math.floor(Math.random() * 8) + 2; 
+            
+            if (chosenType === 'add') {
+                state.currentQ = { type: 'add', k, c: ans + k, ans }; 
+            } else if (chosenType === 'sub') {
+                state.currentQ = { type: 'sub', k, c: ans - k, ans }; 
+            } else if (chosenType === 'mul') {
+                state.currentQ = { type: 'mul', k, c: k * ans, ans }; 
+            } else if (chosenType === 'div') {
+                state.currentQ = { type: 'div', k, c: ans, ans: ans * k }; 
+            } else if (chosenType === 'add_x_second') {
+                state.currentQ = { type: 'add_x_second', k, c: ans + k, ans };
+            } else if (chosenType === 'sub_x_second') {
+                state.currentQ = { type: 'sub_x_second', k, c: -k + ans, ans };
+            } else if (chosenType === 'const_sub_x') {
+                const largeK = Math.floor(Math.random() * 10) + 11; 
+                const b = largeK - ans;
+                state.currentQ = { type: 'const_sub_x', k: largeK, c: b, ans };
+            } else if (chosenType === 'neg_const_sub_x') {
+                state.currentQ = { type: 'neg_const_sub_x', k, c: -k - ans, ans };
+            }
+        } else if (lv === 2) {
+            const types = ['ax_add_k', 'ax_sub_k', 'x_frac_add', 'add_x_frac', 'sub_x_frac', 'neg_const_sub_x_frac'];
+            const chosenType = types[Math.floor(Math.random() * types.length)];
+            const a = Math.floor(Math.random() * 4) + 2; 
+            const ans = Math.floor(Math.random() * 8) + 2; 
+            const k = Math.floor(Math.random() * 10) + 1; 
+            
+            if (chosenType === 'ax_add_k') {
+                const c = a * ans + k;
+                state.currentQ = { type: 'ax_add_k', a, k, op: '+', c, ans };
+            } else if (chosenType === 'ax_sub_k') {
+                const c = a * ans - k;
+                state.currentQ = { type: 'ax_sub_k', a, k, op: '-', c, ans };
+            } else if (chosenType === 'x_frac_add') {
+                const c = ans + k; 
+                state.currentQ = { type: 'x_frac_add', a, k, c, ans: ans * a };
+            } else if (chosenType === 'add_x_frac') {
+                const c = k + ans;
+                state.currentQ = { type: 'add_x_frac', a, k, c, ans: ans * a };
+            } else if (chosenType === 'sub_x_frac') {
+                const c = -k + ans;
+                state.currentQ = { type: 'sub_x_frac', a, k, c, ans: ans * a };
+            } else if (chosenType === 'neg_const_sub_x_frac') {
+                const c = ans - k;
+                state.currentQ = { type: 'neg_const_sub_x_frac', a, k, c, ans: -ans * a };
+            }
+        } else if (lv === 3) {
+            const isXBot = Math.random() > 0.5;
+            if (isXBot) {
+                let b, d, a, ans;
+                do {
+                    b = Math.floor(Math.random() * 7) + 2; 
+                    d = Math.floor(Math.random() * 7) + 2; 
+                    ans = Math.floor(Math.random() * 8) + 2; 
+                    a = (b * d) / ans; 
+                } while (!Number.isInteger(a) || a <= 0 || b === d);
+                state.currentQ = { b, d, a, ans, type: 'x_bot' };
+                state.gameState = 'L3_BOT_MOVE_D';
+            } else {
+                let b, d, a, ans;
+                do {
+                    b = Math.floor(Math.random() * 7) + 2; 
+                    d = Math.floor(Math.random() * 7) + 2; 
+                    ans = Math.floor(Math.random() * 8) + 2; 
+                    a = (ans * d) / b; 
+                } while (!Number.isInteger(a) || a <= 0 || b === d);
+                state.currentQ = { b, d, a, ans, type: 'x_top' };
+                state.gameState = 'L3_MOVE';
+            }
+        }
+        renderEquation();
+    }
+    function renderEquation() {
+        const workspace = document.getElementById('workspace');
+        const ins = document.getElementById('instruction');
+        const q = state.currentQ;
+        
+        workspace.innerHTML = '';
+        state.dragData = { active: false, el: null, startX: 0, startY: 0, x: 0, y: 0 }; 
+        const isGuideVisible = state.currentRound <= 5;
+        const modeText = isGuideVisible ? "" : "（⚠️ 第6-10題：挑戰開啟！虛線落區已隱藏）";
+        if (state.gameState === 'L1_CONST') {
+            const { type, k, c } = q;
+            if (type === 'add') {
+                ins.innerText = "將常數項「+k」拖到右邊進行移項 " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-node">x</div>
+                    <div class="math-node draggable" id="drag-node" data-val="+${k}"><span>+${k}</span></div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${c}</div>
+                `;
+            } else if (type === 'sub') {
+                ins.innerText = "將常數項「-k」拖到右邊進行移項 " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-node">x</div>
+                    <div class="math-node draggable" id="drag-node" data-val="-${k}"><span>-${k}</span></div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${c}</div>
+                `;
+            } else if (type === 'mul') {
+                ins.innerText = "將乘法係數「k」拖到右邊變成分母 " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-node draggable" id="drag-node" data-val="${k}"><span>${k}</span></div>
+                    <div class="math-node" style="background:none; margin-left:-5px;">x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${c}</div>
+                `;
+            } else if (type === 'div') {
+                ins.innerText = "將除法分母「k」拖到右邊變為相乘 " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-frac">
+                        <div class="math-node">x</div>
+                        <div class="math-frac-line"></div>
+                        <div class="math-node draggable" id="drag-node" data-val="${k}"><span>${k}</span></div>
+                    </div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${c}</div>
+                `;
+            } else if (type === 'add_x_second') {
+                ins.innerText = "將常數項「a」拖到右邊進行移項 " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-node draggable" id="drag-node" data-val="+${k}" data-no-sign="true"><span>${k}</span></div>
+                    <div class="math-node" style="background:none; margin-left:-5px;">+</div>
+                    <div class="math-node">x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${c}</div>
+                `;
+            } else if (type === 'sub_x_second') {
+                ins.innerText = "將常數項「-a」拖到右邊進行移項 " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-node draggable" id="drag-node" data-val="-${k}"><span>-${k}</span></div>
+                    <div class="math-node" style="background:none; margin-left:-5px;">+</div>
+                    <div class="math-node">x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${c}</div>
+                `;
+            } else if (type === 'const_sub_x') {
+                ins.innerText = "將常數項「a」拖到右邊進行移項 " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-node draggable" id="drag-node" data-val="+${k}" data-no-sign="true"><span>${k}</span></div>
+                    <div class="math-node" style="background:none; margin-left:-5px;">-</div>
+                    <div class="math-node">x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${c}</div>
+                `;
+            } else if (type === 'neg_const_sub_x') {
+                ins.innerText = "將常數項「-a」拖到右邊進行移項 " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-node draggable" id="drag-node" data-val="-${k}"><span>-${k}</span></div>
+                    <div class="math-node" style="background:none; margin-left:-5px;">-</div>
+                    <div class="math-node">x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${c}</div>
+                `;
+            }
+        } 
+        else if (state.gameState === 'L1_CALC') {
+            const { type, k, c } = q;
+            ins.innerText = "移項成功！點擊右側運算式計算數值";
+            if (type === 'add' || type === 'add_x_second') {
+                workspace.innerHTML = `
+                    <div class="math-node">x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="clickable-calc" onclick="resolveL1()">${c} - ${k}</div>
+                `;
+            } else if (type === 'sub' || type === 'sub_x_second') {
+                workspace.innerHTML = `
+                    <div class="math-node">x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="clickable-calc" onclick="resolveL1()">${c} + ${k}</div>
+                `;
+            } else if (type === 'mul') {
+                workspace.innerHTML = `
+                    <div class="math-node">x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-frac clickable-calc" onclick="resolveL1()" style="padding: 10px 20px;">
+                        <div class="math-node" style="background:none; padding:0;">${c}</div>
+                        <div class="math-frac-line"></div>
+                        <div class="math-node" style="background:none; padding:0;">${k}</div>
+                    </div>
+                `;
+            } else if (type === 'div') {
+                workspace.innerHTML = `
+                    <div class="math-node">x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="clickable-calc" onclick="resolveL1()">${c} × ${k}</div>
+                `;
+            } else if (type === 'const_sub_x') {
+                workspace.innerHTML = `
+                    <div class="math-node">-x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="clickable-calc" onclick="resolveL1NegStep()">${c} - ${k}</div>
+                `;
+            } else if (type === 'neg_const_sub_x') {
+                workspace.innerHTML = `
+                    <div class="math-node">-x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="clickable-calc" onclick="resolveL1NegStep()">${c} + ${k}</div>
+                `;
+            }
+        }
+        else if (state.gameState === 'L1_SIGN_CHANGE') {
+            ins.innerText = "最後一步：將左側負號「-」拖到右側數字格上進行變號 " + modeText;
+            workspace.innerHTML = `
+                <div class="math-node draggable" id="drag-node" data-val="-"><span>-</span></div>
+                <div class="math-node" style="background:none; margin-left:-5px;">x</div>
+                <div class="math-node equal">=</div>
+                <div class="math-node" id="right-val">${q.midVal}</div>
+            `;
+        }
+        else if (state.gameState === 'L2_CONST') {
+            const { type } = q;
+            if (type === 'ax_add_k' || type === 'ax_sub_k') {
+                ins.innerText = "第一步：先移走加減常數項（連同符號一起拖曳） " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-node">${q.a}x</div>
+                    <div class="math-node draggable" id="drag-node" data-val="${q.op}${q.k}"><span>${q.op}${q.k}</span></div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${q.c}</div>
+                `;
+            } else if (type === 'x_frac_add') {
+                ins.innerText = "第一步：先移走加法常數項（連同符號一起拖曳） " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-frac">
+                        <div class="math-node">x</div>
+                        <div class="math-frac-line"></div>
+                        <div class="math-node">${q.a}</div>
+                    </div>
+                    <div class="math-node draggable" id="drag-node" data-val="+${q.k}"><span>+${q.k}</span></div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${q.c}</div>
+                `;
+            } else if (type === 'add_x_frac') {
+                ins.innerText = "第一步：先移走正數常數項（連同符號一起拖曳） " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-node draggable" id="drag-node" data-val="+${q.k}" data-no-sign="true"><span>${q.k}</span></div>
+                    <div class="math-node" style="background:none; margin-left:-5px;">+</div>
+                    <div class="math-frac">
+                        <div class="math-node">x</div>
+                        <div class="math-frac-line"></div>
+                        <div class="math-node">${q.a}</div>
+                    </div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${q.c}</div>
+                `;
+            } else if (type === 'sub_x_frac') {
+                ins.innerText = "第一步：先移走負數常數項（連同符號一起拖曳） " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-node draggable" id="drag-node" data-val="-${q.k}"><span>-${q.k}</span></div>
+                    <div class="math-node" style="background:none; margin-left:-5px;">+</div>
+                    <div class="math-frac">
+                        <div class="math-node">x</div>
+                        <div class="math-frac-line"></div>
+                        <div class="math-node">${q.a}</div>
+                    </div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${q.c}</div>
+                `;
+            } else if (type === 'neg_const_sub_x_frac') {
+                ins.innerText = "第一步：先移走負數常數項（連同符號一起拖曳） " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-node draggable" id="drag-node" data-val="-${q.k}"><span>-${q.k}</span></div>
+                    <div class="math-node" style="background:none; margin-left:-5px;">-</div>
+                    <div class="math-frac">
+                        <div class="math-node">x</div>
+                        <div class="math-frac-line"></div>
+                        <div class="math-node">${q.a}</div>
+                    </div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${q.c}</div>
+                `;
+            }
+        }
+        else if (state.gameState === 'L2_CALC_CONST') {
+            const { type } = q;
+            ins.innerText = "第二步：點擊運算塊進行數值計算";
+            if (type === 'ax_add_k' || type === 'ax_sub_k') {
+                const oppositeOp = q.op === '+' ? '-' : '+';
+                workspace.innerHTML = `
+                    <div class="math-node">${q.a}x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="clickable-calc" onclick="resolveL2Const()">${q.c} ${oppositeOp} ${q.k}</div>
+                `;
+            } else if (type === 'x_frac_add' || type === 'add_x_frac') {
+                workspace.innerHTML = `
+                    <div class="math-frac">
+                        <div class="math-node">x</div>
+                        <div class="math-frac-line"></div>
+                        <div class="math-node">${q.a}</div>
+                    </div>
+                    <div class="math-node equal">=</div>
+                    <div class="clickable-calc" onclick="resolveL2Const()">${q.c} - ${q.k}</div>
+                `;
+            } else if (type === 'sub_x_frac' || type === 'neg_const_sub_x_frac') {
+                workspace.innerHTML = `
+                    <div class="math-frac" style="display:${type === 'neg_const_sub_x_frac' ? 'none' : 'inline-flex'};">
+                        <div class="math-node">x</div>
+                        <div class="math-frac-line"></div>
+                        <div class="math-node">${q.a}</div>
+                    </div>
+                    <div style="display:${type === 'neg_const_sub_x_frac' ? 'inline-flex' : 'none'}; align-items:center;">
+                        <div class="math-node" style="margin-right:-10px;">-</div>
+                        <div class="math-frac">
+                            <div class="math-node">x</div>
+                            <div class="math-frac-line"></div>
+                            <div class="math-node">${q.a}</div>
+                        </div>
+                    </div>
+                    <div class="math-node equal">=</div>
+                    <div class="clickable-calc" onclick="resolveL2Const()">${q.c} + ${q.k}</div>
+                `;
+            }
+        }
+        else if (state.gameState === 'L2_COEFF') {
+            const { type } = q;
+            if (type === 'ax_add_k' || type === 'ax_sub_k') {
+                ins.innerText = "第三步：將乘法係數「k」拖到右邊變成分母 " + modeText;
+                workspace.innerHTML = `
+                    <div class="math-node draggable" id="drag-node" data-val="${q.a}"><span>${q.a}</span></div>
+                    <div class="math-node" style="background:none; margin-left:-5px;">x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-node" id="right-val">${q.midVal}</div>
+                `;
+            } else {
+                ins.innerText = "第三步：將除法分母「k」拖到右邊變為相乘 " + modeText;
+                if (type === 'neg_const_sub_x_frac') {
+                    workspace.innerHTML = `
+                        <div style="display:inline-flex; align-items:center;">
+                            <div class="math-node" style="margin-right:-10px;">-</div>
+                            <div class="math-frac">
+                                <div class="math-node">x</div>
+                                <div class="math-frac-line"></div>
+                                <div class="math-node draggable" id="drag-node" data-val="${q.a}"><span>${q.a}</span></div>
+                            </div>
+                        </div>
+                        <div class="math-node equal">=</div>
+                        <div class="math-node" id="right-val">${q.midVal}</div>
+                    `;
+                } else {
+                    workspace.innerHTML = `
+                        <div class="math-frac">
+                            <div class="math-node">x</div>
+                            <div class="math-frac-line"></div>
+                            <div class="math-node draggable" id="drag-node" data-val="${q.a}"><span>${q.a}</span></div>
+                        </div>
+                        <div class="math-node equal">=</div>
+                        <div class="math-node" id="right-val">${q.midVal}</div>
+                    `;
+                }
+            }
+        }
+        else if (state.gameState === 'L2_CALC_FINAL') {
+            const { type } = q;
+            if (type === 'ax_add_k' || type === 'ax_sub_k') {
+                ins.innerText = "最後一步：點擊分數運算塊進行約分得到答案";
+                workspace.innerHTML = `
+                    <div class="math-node">x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="math-frac clickable-calc" onclick="resolveL2Final()" style="padding: 10px 20px;">
+                        <div class="math-node" style="background:none; padding:0;">${q.midVal}</div>
+                        <div class="math-frac-line"></div>
+                        <div class="math-node" style="background:none; padding:0;">${q.a}</div>
+                    </div>
+                `;
+            } else if (type === 'neg_const_sub_x_frac') {
+                ins.innerText = "第四步：點擊運算塊完成乘法計算";
+                workspace.innerHTML = `
+                    <div class="math-node">-x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="clickable-calc" onclick="resolveL2NegFinalStep()">${q.midVal} × ${q.a}</div>
+                `;
+            } else {
+                ins.innerText = "最後一步：點擊乘法運算塊進行計算得到答案";
+                workspace.innerHTML = `
+                    <div class="math-node">x</div>
+                    <div class="math-node equal">=</div>
+                    <div class="clickable-calc" onclick="resolveL2Final()">${q.midVal} × ${q.a}</div>
+                `;
+            }
+        }
+        else if (state.gameState === 'L2_SIGN_CHANGE') {
+            ins.innerText = "最後一步：將左側負號「-」拖到右側數字格上進行變號 " + modeText;
+            workspace.innerHTML = `
+                <div class="math-node draggable" id="drag-node" data-val="-"><span>-</span></div>
+                <div class="math-node" style="background:none; margin-left:-5px;">x</div>
+                <div class="math-node equal">=</div>
+                <div class="math-node" id="right-val">${q.midVal2}</div>
+            `;
+        }
+        else if (state.gameState === 'L3_MOVE') {
+            ins.innerText = "第一步：將左側分母拖到右側分子旁邊進行相乘 " + modeText;
+            workspace.innerHTML = `
+                <div class="math-frac">
+                    <div class="math-node">x</div>
+                    <div class="math-frac-line"></div>
+                    <div class="math-node draggable" id="drag-node" data-val="${q.b}"><span>${q.b}</span></div>
+                </div>
+                <div class="math-node equal">=</div>
+                <div class="math-frac">
+                    <div class="math-node" id="target-ref">${q.a}</div>
+                    <div class="math-frac-line"></div>
+                    <div class="math-node">${q.d}</div>
+                </div>
+            `;
+        }
+        else if (state.gameState === 'L3_CALC_MUL') {
+            ins.innerText = "第二步：移項成功！點擊分子運算塊完成乘法計算";
+            workspace.innerHTML = `
+                <div class="math-node">x</div>
+                <div class="math-node equal">=</div>
+                <div class="math-frac">
+                    <div class="clickable-calc" onclick="resolveL3Mul()" style="font-size: 2.2rem; padding: 6px 14px;">${q.a} × ${q.b}</div>
+                    <div class="math-frac-line"></div>
+                    <div class="math-node" style="background:none;">${q.d}</div>
+                </div>
+            `;
+        }
+        else if (state.gameState === 'L3_CALC_FINAL') {
+            ins.innerText = "最後一步：點擊分數進行約分與除法計算";
+            const midTop = q.a * q.b;
+            workspace.innerHTML = `
+                <div class="math-node">x</div>
+                <div class="math-node equal">=</div>
+                <div class="math-frac clickable-calc" onclick="resolveL3Final()" style="padding: 10px 20px;">
+                    <div class="math-node" style="background:none; padding:0;">${midTop}</div>
+                    <div class="math-frac-line"></div>
+                    <div class="math-node" style="background:none; padding:0;">${q.d}</div>
+                </div>
+            `;
+        }
+        else if (state.gameState === 'L3_BOT_MOVE_D') {
+            ins.innerText = "第一步：將右側分母「d」拖到左側分子「b」左邊或右邊進行相乘 " + modeText;
+            workspace.innerHTML = `
+                <div class="math-frac">
+                    <div class="math-node" id="target-ref">${q.b}</div>
+                    <div class="math-frac-line"></div>
+                    <div class="math-node">x</div>
+                </div>
+                <div class="math-node equal">=</div>
+                <div class="math-frac">
+                    <div class="math-node">${q.a}</div>
+                    <div class="math-frac-line"></div>
+                    <div class="math-node draggable" id="drag-node" data-val="${q.d}"><span>${q.d}</span></div>
+                </div>
+            `;
+        }
+        else if (state.gameState === 'L3_BOT_MOVE_X') {
+            ins.innerText = "第二步：將左側分母「x」拖到右側分子旁邊形成 ax " + modeText;
+            workspace.innerHTML = `
+                <div class="math-frac">
+                    <div class="math-node" id="left-top">${q.b} × ${q.d}</div>
+                    <div class="math-frac-line"></div>
+                    <div class="math-node draggable" id="drag-node" data-val="x"><span>x</span></div>
+                </div>
+                <div class="math-node equal">=</div>
+                <div class="math-node" id="target-ref">${q.a}</div>
+            `;
+        }
+        else if (state.gameState === 'L3_BOT_CALC_D') {
+            ins.innerText = "第三步：點擊左側運算塊計算乘積";
+            workspace.innerHTML = `
+                <div class="clickable-calc" onclick="resolveL3BotD()">${q.b} × ${q.d}</div>
+                <div class="math-node equal">=</div>
+                <div class="math-node">${q.a} × x</div>
+            `;
+        }
+        else if (state.gameState === 'L3_BOT_CALC_X') {
+            ins.innerText = "第四步：點擊右側運算塊確認形成 ax";
+            const product = q.b * q.d;
+            workspace.innerHTML = `
+                <div class="math-node">${product}</div>
+                <div class="math-node equal">=</div>
+                <div class="clickable-calc" onclick="resolveL3BotX()">${q.a} × x</div>
+            `;
+        }
+        else if (state.gameState === 'L3_BOT_MOVE_A') {
+            ins.innerText = "第五步：將右側係數「a」拖到左側下方變成分母 " + modeText;
+            const product = q.b * q.d;
+            workspace.innerHTML = `
+                <div class="math-node" id="target-ref">${product}</div>
+                <div class="math-node equal">=</div>
+                <div style="display:inline-flex; align-items:center;">
+                    <div class="math-node draggable" id="drag-node" data-val="${q.a}"><span>${q.a}</span></div>
+                    <div class="math-node" style="background:none; margin-left:-5px;">x</div>
+                </div>
+            `;
+        }
+        else if (state.gameState === 'L3_BOT_CALC_FINAL') {
+            ins.innerText = "最後一步：點擊分數運算塊約分並計算答案";
+            const product = q.b * q.d;
+            workspace.innerHTML = `
+                <div class="math-frac clickable-calc" onclick="resolveL3BotFinal()" style="padding: 10px 20px;">
+                    <div class="math-node" style="background:none; padding:0;">${product}</div>
+                    <div class="math-frac-line"></div>
+                    <div class="math-node" style="background:none; padding:0;">${q.a}</div>
+                </div>
+                <div class="math-node equal">=</div>
+                <div class="math-node">x</div>
+            `;
+        }
+        setTimeout(() => {
+            updateDropZonePosition();
+            const dragEl = document.getElementById('drag-node');
+            if (dragEl) {
+                bindDragEvents(dragEl);
+            }
+        }, 50);
+    }
+    function setupDropZone(zoneId, refId, position, text) {
+        const refEl = document.getElementById(refId);
+        const zone = document.getElementById(zoneId);
+        const stage = document.getElementById('stage-area');
+        
+        if (!refEl || !zone || !stage) return;
+        
+        const refRect = refEl.getBoundingClientRect();
+        const stageRect = stage.getBoundingClientRect();
+        
+        let width = 110;
+        let height = 75;
+        let left, top;
+        if (position === 'side') {
+            width = 110;
+            height = refRect.height > 40 ? refRect.height : 75;
+            left = refRect.right - stageRect.left + 15;
+            const refCenterY = refRect.top + refRect.height / 2;
+            top = refCenterY - stageRect.top - height / 2;
+        } else if (position === 'side-left') {
+            width = 110;
+            height = refRect.height > 40 ? refRect.height : 75;
+            left = refRect.left - stageRect.left - width - 15;
+            const refCenterY = refRect.top + refRect.height / 2;
+            top = refCenterY - stageRect.top - height / 2;
+        } else if (position === 'bottom') {
+            width = refRect.width + 24;
+            height = 70;
+            left = refRect.left - stageRect.left + (refRect.width - width) / 2;
+            top = refRect.bottom - stageRect.top + 15;
+        } else if (position === 'overlap') {
+            width = refRect.width;
+            height = refRect.height;
+            left = refRect.left - stageRect.left;
+            top = refRect.top - stageRect.top;
+            text = "";
+        }
+        zone.style.width = width + 'px';
+        zone.style.height = height + 'px';
+        zone.style.left = left + 'px';
+        zone.style.top = top + 'px';
+        if (state.currentRound <= 5) {
+            zone.style.border = '3px dashed #C7C7CC';
+            zone.style.background = '';
+            if (position !== 'overlap') {
+                zone.style.color = 'var(--apple-grey)';
+                zone.innerText = text;
+            } else {
+                zone.style.color = 'transparent';
+                zone.innerText = '';
+            }
+        } else {
+            zone.style.border = 'none';
+            zone.style.background = 'transparent';
+            zone.style.color = 'transparent';
+            zone.innerText = '';
+        }
+        zone.className = 'drop-zone visible';
+        zone.style.opacity = '1';
+    }
+    function updateDropZonePosition() {
+        const zone1 = document.getElementById('target-zone');
+        const zone2 = document.getElementById('target-zone-2');
+        
+        if (zone1) {
+            zone1.style.opacity = '0';
+            zone1.className = 'drop-zone';
+        }
+        if (zone2) {
+            zone2.style.opacity = '0';
+            zone2.className = 'drop-zone';
+        }
+        if (state.gameState === 'IDLE' || state.gameState.includes('CALC')) {
+            return;
+        }
+        
+        const q = state.currentQ;
+        if (state.gameState === 'L1_CONST') {
+            const { type } = q;
+            if (type === 'add' || type === 'add_x_second') setupDropZone('target-zone', 'right-val', 'side', '變號為負');
+            else if (type === 'sub' || type === 'sub_x_second') setupDropZone('target-zone', 'right-val', 'side', '變號為正');
+            else if (type === 'mul') setupDropZone('target-zone', 'right-val', 'bottom', '變成分母');
+            else if (type === 'div') setupDropZone('target-zone', 'right-val', 'side', '變為相乘');
+            else if (type === 'const_sub_x') setupDropZone('target-zone', 'right-val', 'side', '變號為負');
+            else if (type === 'neg_const_sub_x') setupDropZone('target-zone', 'right-val', 'side', '變號為正');
+        } else if (state.gameState === 'L1_SIGN_CHANGE') {
+            setupDropZone('target-zone', 'right-val', 'overlap', '變號');
+        } else if (state.gameState === 'L2_CONST') {
+            if (q.type === 'ax_add_k' || q.type === 'ax_sub_k') {
+                setupDropZone('target-zone', 'right-val', 'side', q.op === '+' ? '變號為負' : '變號為正');
+            } else if (q.type === 'x_frac_add' || q.type === 'add_x_frac') {
+                setupDropZone('target-zone', 'right-val', 'side', '變號為負');
+            } else if (q.type === 'sub_x_frac' || q.type === 'neg_const_sub_x_frac') {
+                setupDropZone('target-zone', 'right-val', 'side', '變號為正');
+            }
+        } else if (state.gameState === 'L2_COEFF') {
+            if (q.type === 'ax_add_k' || q.type === 'ax_sub_k') {
+                setupDropZone('target-zone', 'right-val', 'bottom', '變成分母');
+            } else {
+                setupDropZone('target-zone', 'right-val', 'side', '變為相乘');
+            }
+        } else if (state.gameState === 'L2_SIGN_CHANGE') {
+            setupDropZone('target-zone', 'right-val', 'overlap', '變號');
+        } else if (state.gameState === 'L3_MOVE') {
+            setupDropZone('target-zone', 'target-ref', 'side', '移到分子旁');
+        } else if (state.gameState === 'L3_BOT_MOVE_D') {
+            setupDropZone('target-zone', 'target-ref', 'side', '移到右邊');
+            setupDropZone('target-zone-2', 'target-ref', 'side-left', '移到左邊');
+        } else if (state.gameState === 'L3_BOT_MOVE_X') {
+            setupDropZone('target-zone', 'target-ref', 'side', '移到分子旁');
+        } else if (state.gameState === 'L3_BOT_MOVE_A') {
+            setupDropZone('target-zone', 'target-ref', 'bottom', '變成分母');
+        }
+    }
+    
+    function bindDragEvents(el) {
+        let active = false;
+        let initialX, initialY;
+        let xOffset = 0, yOffset = 0;
+        let rAF_ID = null; // 用於儲存 requestAnimationFrame ID
+        const targetZone1 = document.getElementById('target-zone');
+        const targetZone2 = document.getElementById('target-zone-2');
+        
+        let elInitRect = null;
+        let tz1Rect = null;
+        let tz2Rect = null;
+        let wsRect = null;
+        const dragStart = (e) => {
+            if (active) return;
+            
+            if (e.type === "touchstart" && e.cancelable) {
+                e.preventDefault(); 
+            }
+            
+            const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === "touchstart" ? e.touches[0].clientY : e.clientY;
+            
+            initialX = clientX - xOffset;
+            initialY = clientY - yOffset;
+            
+            if (e.target === el || el.contains(e.target)) {
+                active = true;
+                
+                el.style.transition = '';
+                el.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                el.classList.add('dragging');
+                
+                elInitRect = el.getBoundingClientRect();
+                tz1Rect = targetZone1 ? targetZone1.getBoundingClientRect() : null;
+                tz2Rect = targetZone2 ? targetZone2.getBoundingClientRect() : null;
+                wsRect = document.getElementById('workspace').getBoundingClientRect();
+                
+                window.addEventListener("touchmove", drag, { passive: false });
+                window.addEventListener("touchend", dragEnd);
+                window.addEventListener("mousemove", drag, { passive: false });
+                window.addEventListener("mouseup", dragEnd);
+            }
+        };
+        
+        const dragEnd = () => {
+            if (!active) return;
+            active = false;
+            if (rAF_ID) cancelAnimationFrame(rAF_ID); // 取消未完成的動畫幀
+            
+            el.classList.remove('dragging');
+            window.removeEventListener("touchmove", drag);
+            window.removeEventListener("touchend", dragEnd);
+            window.removeEventListener("mousemove", drag);
+            window.removeEventListener("mouseup", dragEnd);
+            
+            const rect = {
+                left: elInitRect.left + xOffset,
+                right: elInitRect.right + xOffset,
+                top: elInitRect.top + yOffset,
+                bottom: elInitRect.bottom + yOffset,
+                width: elInitRect.width,
+                height: elInitRect.height
+            };
+            let matchedTarget = null;
+            let minDistance = 9999;
+            
+            const checkCollision = (zone, targetRect) => {
+                if (!zone || zone.style.opacity === '0' || !targetRect) return;
+                
+                const isOverlap = !(rect.right < targetRect.left || 
+                                    rect.left > targetRect.right || 
+                                    rect.bottom < targetRect.top || 
+                                    rect.top > targetRect.bottom);
+                
+                const elCenterX = rect.left + rect.width / 2;
+                const elCenterY = rect.top + rect.height / 2;
+                const targetCenterX = targetRect.left + targetRect.width / 2;
+                const targetCenterY = targetRect.top + targetRect.height / 2;
+                const distance = Math.hypot(elCenterX - targetCenterX, elCenterY - targetCenterY);
+                
+                if ((isOverlap || distance < 120) && distance < minDistance) {
+                    minDistance = distance;
+                    matchedTarget = zone;
+                }
+            };
+            
+            checkCollision(targetZone1, tz1Rect);
+            checkCollision(targetZone2, tz2Rect);
+            
+            if (matchedTarget) {
+                const targetRect = matchedTarget === targetZone1 ? tz1Rect : tz2Rect;
+                const origLeft = elInitRect.left;
+                const origTop = elInitRect.top;
+                
+                const finalX = targetRect.left - origLeft + (targetRect.width - elInitRect.width) / 2;
+                const finalY = targetRect.top - origTop + (targetRect.height - elInitRect.height) / 2;
+                
+                el.style.transition = 'transform 0.25s cubic-bezier(0.25, 1, 0.5, 1)';
+                el.style.transform = `translate3d(${finalX}px, ${finalY}px, 0)`;
+                
+                const val = el.dataset.val;
+                const signEl = el.querySelector('span');
+                if (val && signEl && (val.startsWith('+') || val.startsWith('-'))) {
+                    signEl.innerText = val.startsWith('+') ? val.replace('+', '-') : val.replace('-', '+');
+                    el.style.borderColor = 'var(--apple-green)';
+                    el.style.color = 'var(--apple-green)';
+                }
+                setTimeout(() => {
+                    triggerSuccessAnimation();
+                    handleSuccessTransposition();
+                    xOffset = 0;
+                    yOffset = 0;
+                    el.style.transition = '';
+                    targetZone1.classList.remove('active');
+                    if (targetZone2) targetZone2.classList.remove('active');
+                }, 250);
+            } else {
+                triggerErrorAnimation();
+                xOffset = 0;
+                yOffset = 0;
+                el.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
+                el.style.transform = `translate3d(0, 0, 0)`;
+                
+                const val = el.dataset.val;
+                const signEl = el.querySelector('span');
+                const noSign = el.dataset.noSign === "true";
+                if (val && signEl && (val.startsWith('+') || val.startsWith('-'))) {
+                    signEl.innerText = noSign ? val.substring(1) : val;
+                    el.style.borderColor = 'var(--primary-blue)';
+                    el.style.color = 'var(--primary-blue)';
+                }
+                if (state.gameState === 'L1_SIGN_CHANGE' || state.gameState === 'L2_SIGN_CHANGE') {
+                    const rightValEl = document.getElementById('right-val');
+                    if (rightValEl) {
+                        const originalVal = state.gameState === 'L1_SIGN_CHANGE' ? state.currentQ.midVal : state.currentQ.midVal2;
+                        rightValEl.innerText = originalVal;
+                        rightValEl.style.color = '';
+                    }
+                }
+                setTimeout(() => {
+                    el.style.transition = '';
+                    targetZone1.classList.remove('active');
+                    if (targetZone2) targetZone2.classList.remove('active');
+                }, 300);
+            }
+        };
+        const drag = (e) => {
+            if (!active) return;
+            if (e.cancelable) e.preventDefault();
+            
+            const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === "touchmove" ? e.touches[0].clientY : e.clientY;
+            
+            xOffset = clientX - initialX;
+            yOffset = clientY - initialY;
+            
+            // 取消上一個未執行的動畫幀
+            if (rAF_ID) cancelAnimationFrame(rAF_ID);
+            
+            rAF_ID = requestAnimationFrame(() => {
+                el.style.transform = `translate3d(${xOffset}px, ${yOffset}px, 0)`;
+                
+                const rect = {
+                    left: elInitRect.left + xOffset,
+                    right: elInitRect.right + xOffset,
+                    top: elInitRect.top + yOffset,
+                    bottom: elInitRect.bottom + yOffset,
+                    width: elInitRect.width,
+                    height: elInitRect.height
+                };
+                
+                const updateZoneHighlight = (zone, targetRect) => {
+                    if (!zone || zone.style.opacity === '0' || !targetRect) return;
+                    
+                    const isOverlap = !(rect.right < targetRect.left || 
+                                        rect.left > targetRect.right || 
+                                        rect.bottom < targetRect.top || 
+                                        rect.top > targetRect.bottom);
+                    
+                    const elCenterX = rect.left + rect.width / 2;
+                    const elCenterY = rect.top + rect.height / 2;
+                    const targetCenterX = targetRect.left + targetRect.width / 2;
+                    const targetCenterY = targetRect.top + targetRect.height / 2;
+                    const distance = Math.hypot(elCenterX - targetCenterX, elCenterY - targetCenterY);
+                    if (isOverlap || distance < 120) {
+                        zone.classList.add('active');
+                    } else {
+                        zone.classList.remove('active');
+                    }
+                };
+                
+                updateZoneHighlight(targetZone1, tz1Rect);
+                updateZoneHighlight(targetZone2, tz2Rect);
+                
+                if (state.gameState === 'L1_CONST' || state.gameState === 'L2_CONST') {
+                    const signEl = el.querySelector('span');
+                    const val = el.dataset.val;
+                    const noSign = el.dataset.noSign === "true";
+                    if (val && (val.startsWith('+') || val.startsWith('-'))) {
+                        const midX = wsRect.left + wsRect.width / 2;
+                        
+                        if (rect.left > midX) {
+                            signEl.innerText = val.startsWith('+') ? val.replace('+', '-') : val.replace('-', '+');
+                            el.style.borderColor = 'var(--apple-green)';
+                            el.style.color = 'var(--apple-green)';
+                        } else {
+                            signEl.innerText = noSign ? val.substring(1) : val;
+                            el.style.borderColor = 'var(--primary-blue)';
+                            el.style.color = 'var(--primary-blue)';
+                        }
+                    }
+                }
+                if (state.gameState === 'L1_SIGN_CHANGE' || state.gameState === 'L2_SIGN_CHANGE') {
+                    const rightValEl = document.getElementById('right-val');
+                    const midX = wsRect.left + wsRect.width * 0.45;
+                    
+                    if (rightValEl) {
+                        const originalVal = state.gameState === 'L1_SIGN_CHANGE' ? state.currentQ.midVal : state.currentQ.midVal2;
+                        if (rect.left > midX) {
+                            if (typeof originalVal === 'number') {
+                                rightValEl.innerText = -originalVal;
+                            } else {
+                                rightValEl.innerText = originalVal.toString().startsWith('-') ? originalVal.toString().substring(1) : '-' + originalVal;
+                            }
+                            rightValEl.style.color = 'var(--apple-green)';
+                        } else {
+                            rightValEl.innerText = originalVal;
+                            rightValEl.style.color = '';
+                        }
+                    }
+                }
+            });
+        };
+        el.addEventListener("touchstart", dragStart, { passive: false });
+        el.addEventListener("mousedown", dragStart);
+    }
+    
+    function triggerSuccessAnimation() {
+        const container = document.getElementById('game-container');
+        if (container) {
+            container.classList.add('blue-flash');
+            setTimeout(() => container.classList.remove('blue-flash'), 400);
+        }
+    }
+    function triggerErrorAnimation() {
+        state.incorrectAttempts++;
+        state.penaltyTime += 2;
+        
+        const container = document.getElementById('game-container');
+        if (container) {
+            container.classList.add('shake-red');
+            showToast("⚠️ 移項位置不正確！請拖入目標落區內（罰時 +2秒）");
+            setTimeout(() => container.classList.remove('shake-red'), 400);
+        }
+    }
+    function handleSuccessTransposition() {
+        const tz = document.getElementById('target-zone');
+        if (tz) tz.style.opacity = '0';
+        const tz2 = document.getElementById('target-zone-2');
+        if (tz2) tz2.style.opacity = '0';
+        
+        if (state.gameState === 'L1_CONST') {
+            state.gameState = 'L1_CALC';
+        } else if (state.gameState === 'L1_SIGN_CHANGE') {
+            resolveL1NegFinal();
+            return;
+        } else if (state.gameState === 'L2_CONST') {
+            state.gameState = 'L2_CALC_CONST';
+        } else if (state.gameState === 'L2_COEFF') {
+            state.gameState = 'L2_CALC_FINAL';
+        } else if (state.gameState === 'L2_SIGN_CHANGE') {
+            resolveL2NegFinal();
+            return;
+        } else if (state.gameState === 'L3_MOVE') {
+            state.gameState = 'L3_CALC_MUL';
+        } else if (state.gameState === 'L3_BOT_MOVE_D') {
+            state.gameState = 'L3_BOT_MOVE_X'; 
+        } else if (state.gameState === 'L3_BOT_MOVE_X') {
+            state.gameState = 'L3_BOT_CALC_D'; 
+        } else if (state.gameState === 'L3_BOT_MOVE_A') {
+            state.gameState = 'L3_BOT_CALC_FINAL'; 
+        }
+        renderEquation();
+    }
+    function resolveL1() {
+        const q = state.currentQ;
+        const workspace = document.getElementById('workspace');
+        if (workspace) {
+            workspace.innerHTML = `
+                <div class="math-node">x</div>
+                <div class="math-node equal">=</div>
+                <div class="math-node" style="color:var(--apple-green); background:rgba(52, 199, 89, 0.08); border: 1px solid var(--apple-green);">${q.ans}</div>
+            `;
+        }
+        playSuccessEffect();
+    }
+    function resolveL1NegStep() {
+        const q = state.currentQ;
+        if (q.type === 'const_sub_x') {
+            q.midVal = -q.ans;
+        } else {
+            q.midVal = q.k + q.c; 
+        }
+        state.gameState = 'L1_SIGN_CHANGE';
+        renderEquation();
+    }
+    function resolveL1NegFinal() {
+        const q = state.currentQ;
+        const workspace = document.getElementById('workspace');
+        if (workspace) {
+            workspace.innerHTML = `
+                <div class="math-node">x</div>
+                <div class="math-node equal">=</div>
+                <div class="math-node" style="color:var(--apple-green); background:rgba(52, 199, 89, 0.08); border: 1px solid var(--apple-green);">${q.ans}</div>
+            `;
+        }
+        playSuccessEffect();
+    }
+    function resolveL2Const() {
+        const q = state.currentQ;
+        if (q.type === 'ax_add_k') {
+            q.midVal = q.c - q.k;
+        } else if (q.type === 'ax_sub_k') {
+            q.midVal = q.c + q.k;
+        } else if (q.type === 'x_frac_add' || q.type === 'add_x_frac') {
+            q.midVal = q.c - q.k;
+        } else if (q.type === 'sub_x_frac' || q.type === 'neg_const_sub_x_frac') {
+            q.midVal = q.c + q.k;
+        }
+        state.gameState = 'L2_COEFF';
+        renderEquation();
+    }
+    function resolveL2Final() {
+        const q = state.currentQ;
+        const workspace = document.getElementById('workspace');
+        if (workspace) {
+            workspace.innerHTML = `
+                <div class="math-node">x</div>
+                <div class="math-node equal">=</div>
+                <div class="math-node" style="color:var(--apple-green); background:rgba(52, 199, 89, 0.08); border: 1px solid var(--apple-green);">${q.ans}</div>
+            `;
+        }
+        playSuccessEffect();
+    }
+    function resolveL2NegFinalStep() {
+        const q = state.currentQ;
+        q.midVal2 = q.midVal * q.a;
+        state.gameState = 'L2_SIGN_CHANGE';
+        renderEquation();
+    }
+    function resolveL2NegFinal() {
+        const q = state.currentQ;
+        const workspace = document.getElementById('workspace');
+        if (workspace) {
+            workspace.innerHTML = `
+                <div class="math-node">x</div>
+                <div class="math-node equal">=</div>
+                <div class="math-node" style="color:var(--apple-green); background:rgba(52, 199, 89, 0.08); border: 1px solid var(--apple-green);">${q.ans}</div>
+            `;
+        }
+        playSuccessEffect();
+    }
+    function resolveL3Mul() {
+        state.gameState = 'L3_CALC_FINAL';
+        renderEquation();
+    }
+    function resolveL3Final() {
+        const q = state.currentQ;
+        const workspace = document.getElementById('workspace');
+        if (workspace) {
+            workspace.innerHTML = `
+                <div class="math-node">x</div>
+                <div class="math-node equal">=</div>
+                <div class="math-node" style="color:var(--apple-green); background:rgba(52, 199, 89, 0.08); border: 1px solid var(--apple-green);">${q.ans}</div>
+            `;
+        }
+        playSuccessEffect();
+    }
+    function resolveL3BotD() {
+        state.gameState = 'L3_BOT_CALC_X'; 
+        renderEquation();
+    }
+    function resolveL3BotX() {
+        state.gameState = 'L3_BOT_MOVE_A'; 
+        renderEquation();
+    }
+    function resolveL3BotFinal() {
+        const q = state.currentQ;
+        const workspace = document.getElementById('workspace');
+        if (workspace) {
+            workspace.innerHTML = `
+                <div class="math-node" style="color:var(--apple-green); background:rgba(52, 199, 89, 0.08); border: 1px solid var(--apple-green);">${q.ans}</div>
+                <div class="math-node equal">=</div>
+                <div class="math-node">x</div>
+            `;
+        }
+        playSuccessEffect();
+    }
+    function playSuccessEffect() {
+        const inst = document.getElementById('instruction');
+        if (inst) {
+            inst.innerText = "正確！完美解答！";
+        }
+        setTimeout(() => {
+            if (state.currentRound < totalRounds) {
+                state.currentRound++;
+                loadRound();
+            } else {
+                endGame();
+            }
+        }, 1000);
+    }
+    async function endGame() {
+        clearInterval(state.timerInt);
+        document.getElementById('play-screen').classList.remove('active');
+        document.getElementById('end-screen').classList.add('active');
+        
+        const finalTimeElapsed = (Date.now() - state.startTime) / 1000 + state.penaltyTime;
+        const totalPenaltiesAdded = state.incorrectAttempts * 2;
+        
+        document.getElementById('final-player').innerText = `[${state.playerClassSeat}]`;
+        document.getElementById('final-penalty-display').innerText = `（包含移項出錯罰時：+${totalPenaltiesAdded} 秒，共出錯 ${state.incorrectAttempts} 次）`;
+        document.getElementById('final-time').innerText = finalTimeElapsed.toFixed(1) + 's';
+        
+        let rank = '';
+        if (finalTimeElapsed < 25) rank = '👑 移項主宰 ( Monarch )';
+        else if (finalTimeElapsed < 45) rank = '🥇 移項大師 ( Master )';
+        else if (finalTimeElapsed < 75) rank = '🎓 移項精英 ( Elite )';
+        else rank = '🌱 移項新秀 ( Rookie )';
+        
+        document.getElementById('final-rank').innerText = rank;
+        try {
+            const localScores = JSON.parse(localStorage.getItem('eq_run_local_scores_v5')) || { lv1: [], lv2: [], lv3: [] };
+            const lvKey = 'lv' + state.selectedLevel;
+            localScores[lvKey].push({
+                classSeat: state.playerClassSeat,
+                time: finalTimeElapsed
+            });
+            localStorage.setItem('eq_run_local_scores_v5', JSON.stringify(localScores));
+        } catch (e) {
+            console.error("寫入本地緩存失敗", e);
+        }
+        try {
+            showToast("🚀 正在上傳成績至雲端資料庫...");
+            await uploadScoreToSupabase(
+                state.playerClassSeat, 
+                parseFloat(finalTimeElapsed.toFixed(1)), 
+                state.selectedLevel,
+                state.incorrectAttempts,
+                state.penaltyTime
+            );
+            showToast("🚀 成績已成功自動推送至雲端排行榜！");
+        } catch (error) {
+            console.error("上傳成績失敗：", error);
+            showToast("❌ 雲端同步失敗，僅保存本地記錄");
+        }
+    }
+    function resetToWelcome() {
+        clearInterval(state.timerInt);
+        document.getElementById('play-screen').classList.remove('active');
+        document.getElementById('end-screen').classList.remove('active');
+        document.getElementById('welcome-screen').classList.add('active');
+        updateLeaderboardView();
+    }
+    window.addEventListener('resize', updateDropZonePosition);
+    window.selectLevel = selectLevel;
+    window.tryStartGame = tryStartGame;
+    window.resetToWelcome = resetToWelcome;
+    window.resolveL1 = resolveL1;
+    window.resolveL1NegStep = resolveL1NegStep;
+    window.resolveL1NegFinal = resolveL1NegFinal;
+    window.resolveL2Const = resolveL2Const;
+    window.resolveL2Final = resolveL2Final;
+    window.resolveL2NegFinalStep = resolveL2NegFinalStep;
+    window.resolveL2NegFinal = resolveL2NegFinal;
+    window.resolveL3Mul = resolveL3Mul;
+    window.resolveL3Final = resolveL3Final;
+    window.resolveL3BotD = resolveL3BotD;
+    window.resolveL3BotX = resolveL3BotX;
+    window.resolveL3BotFinal = resolveL3BotFinal;
+    window.triggerErrorAnimation = triggerErrorAnimation;
+    window.showToast = showToast;
+</script>
+</body>
+</html>
